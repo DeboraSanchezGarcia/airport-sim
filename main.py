@@ -3,61 +3,90 @@ import numpy as np
 import pandas as pd
 import os
 
-class AirportSimulation:
-    def __init__(self, env, num_gates=4, num_crew=2, num_vehicles=2):
-        self.env = env
-        # Resource definitions
-        self.gates = simpy.Resource(env, capacity=num_gates)
-        self.ground_crew = simpy.Resource(env, capacity=num_crew)
-        self.service_vehicles = simpy.Resource(env, capacity=num_vehicles)
-        self.metrics = []
+# Passive Entities
+class Gate:
+    def __init__(self, env):
+        self.resource = simpy.Resource(env, capacity=1)
 
-    def aircraft_process(self, name):
+class GroundCrew:
+    def __init__(self, env):
+        self.resource = simpy.Resource(env, capacity=1)
+
+class ServiceVehicles:
+    def __init__(self, env):
+        self.resource = simpy.Resource(env, capacity=1)
+
+# Active Entity
+class Aircraft:
+    def __init__(self, name, env, simulation):
+        self.name = name
+        self.env = env
+        self.simulation = simulation
+
+    def process_turnaround(self):
         arrival_time = self.env.now
         
-        # 1. Queue-Based System: Gate Request 
-        with self.gates.request() as gate_req:
-            yield gate_req
+        # Requesting resources from the simulation instance
+        with self.simulation.gates.request() as gate_req, \
+             self.simulation.ground_crew.request() as crew_req, \
+             self.simulation.service_vehicles.request() as veh_req:
             
-            # 2. Probability: Triangular Distribution 
-            # Parameters: low, mode, high (example values)
+            yield gate_req & crew_req & veh_req
+            
+            # Servicing (Triangular Distribution)
             service_time = np.random.triangular(10, 20, 40)
+            yield self.env.timeout(service_time)
             
-            # Request resources
-            with self.ground_crew.request() as crew_req, \
-                 self.service_vehicles.request() as veh_req:
-                yield crew_req & veh_req
-                
-                # Perform servicing
-                yield self.env.timeout(service_time)
-                
-            wait_time = self.env.now - arrival_time
-            # Initial Data Collection with example values
-            self.metrics.append({
-                'aircraft': name, 
-                'wait_time': wait_time,
-                'service_time': service_time
-            })
+            # Collect metrics
+            self.simulation.record_metrics(self.name, arrival_time, service_time)
 
-def run_simulation():
-    env = simpy.Environment()
-    sim = AirportSimulation(env)
-    
-    # Process interaction: Add aircraft at intervals
-    for i in range(10):
-        env.process(sim.aircraft_process(f"Plane {i}"))
-    
-    env.run(until=100)
-    
-    # Export initial data
-    file_exists = os.path.isfile("simulation_metrics.csv")
-    df = pd.DataFrame(sim.metrics)
-    df.to_csv("simulation_metrics.csv", mode='a', index=False, header=not file_exists)
+# Airport Simulation
+class AirportSimulation:
+    ARRIVAL_RATE = 0.8333 # estimating 40 planes in an 8 hour day (480 minutes)
+    SIMULATION_DURATION = 480 # 8 hours in minutes
 
-    full_df = pd.read_csv("simulation_metrics.csv")
+    def __init__(self, env, arrival_rate=ARRIVAL_RATE): 
+        self.env = env
+        self.arrival_rate = arrival_rate
+        self.gates = simpy.Resource(env, capacity=4) 
+        self.ground_crew = simpy.Resource(env, capacity=2)
+        self.service_vehicles = simpy.Resource(env, capacity=2)
+        self.metrics = []
 
-    pd.set_option('display.max_rows', None)
-    print(full_df)
+    def arrival_generator(self):
+        count = 1
+        while True:
+            # Exponential Distribution 
+            yield self.env.timeout(np.random.exponential(1.0 / self.arrival_rate))
+            
+            # New Aircraft
+            plane = Aircraft(f"Plane {count}", self.env, self)
+            self.env.process(plane.process_turnaround())
+            count += 1
 
-if __name__ == "__main__":
-    run_simulation()
+    def run_simulation(self, duration=SIMULATION_DURATION):
+        self.env.process(self.arrival_generator())
+        self.env.run(until=duration)
+
+    def record_metrics(self, name, arrival_time, service_time):
+        wait_time = self.env.now - arrival_time - service_time
+        self.metrics.append({
+            'aircraft': name,
+            'wait_time': wait_time,
+            'service_time': service_time,
+            'completion_time': self.env.now
+        })
+
+    def save_to_csv(self, filename):
+        df = pd.DataFrame(self.metrics)
+        file_exists = os.path.isfile(filename)
+        df.to_csv(filename, mode='w', index=False)
+        print(f"Metrics saved to {filename}")
+
+# Execution
+env = simpy.Environment()
+sim = AirportSimulation(env,)
+sim.run_simulation()
+sim.save_to_csv("simulation_metrics.csv")
+data = pd.read_csv("simulation_metrics.csv")
+print(data)
