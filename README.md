@@ -24,3 +24,4 @@ Entities - Gates, Service Vehicles, Ground Crew, Aircraft
 AirportSimulation: handles random arrivals using exponential distribution, initates requests for resources, and stores data
 
 Overall classes and architecture are quite similar to UML design for M1, with the change that the ResourceManager has been absorbed into each class using simpy.
+
