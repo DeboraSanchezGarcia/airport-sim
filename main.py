@@ -1,6 +1,7 @@
 import simpy
 import numpy as np
 import pandas as pd
+import os
 
 class AirportSimulation:
     def __init__(self, env, num_gates=4, num_crew=2, num_vehicles=2):
@@ -49,9 +50,14 @@ def run_simulation():
     env.run(until=100)
     
     # Export initial data
+    file_exists = os.path.isfile("simulation_metrics.csv")
     df = pd.DataFrame(sim.metrics)
-    print(df.head())
-    df.to_csv("simulation_metrics.csv", index=False)
+    df.to_csv("simulation_metrics.csv", mode='a', index=False, header=not file_exists)
+
+    full_df = pd.read_csv("simulation_metrics.csv")
+
+    pd.set_option('display.max_rows', None)
+    print(full_df)
 
 if __name__ == "__main__":
     run_simulation()
