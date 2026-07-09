@@ -10,7 +10,7 @@ def generate_m3_summary():
         print("Error: simulation_metrics.csv not found. Please run main.py first.")
         return
 
-    # Group by run_id and calculate our key metrics
+    # Group by run_id and calculate key metrics
     summary = df.groupby('run_id').agg(
         Total_Planes_Processed=('aircraft', 'count'),
         Avg_Wait_Time_mins=('wait_time', 'mean'),
@@ -36,7 +36,7 @@ def generate_m3_summary():
     # Insert the scenario names as the first column
     summary.insert(0, 'Scenario_Description', scenario_names)
 
-    # Print the table in Markdown format (Perfect for copy-pasting into reports!)
+    # Print the table in Markdown format
     print("\n" + "="*60)
     print("MILESTONE 3: RUN SUMMARY TABLE")
     print("="*60 + "\n")
