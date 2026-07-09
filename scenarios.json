@@ -1,5 +1,5 @@
 [
-    {"run_id": 1, "arrival_rate": 0.0833, "gates": 4, "crew": 2, "vehicles": 2},
+    {"run_id": 1, "arrival_rate": 0.0833, "gates": 4, "crew": 2, "vehicles": 2},    
     {"run_id": 2, "arrival_rate": 0.0833, "gates": 4, "crew": 3, "vehicles": 2},
     {"run_id": 3, "arrival_rate": 0.0833, "gates": 4, "crew": 2, "vehicles": 3},
     {"run_id": 4, "arrival_rate": 0.0833, "gates": 4, "crew": 4, "vehicles": 4},

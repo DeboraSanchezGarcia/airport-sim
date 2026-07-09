@@ -25,3 +25,15 @@ AirportSimulation: handles random arrivals using exponential distribution, inita
 
 Overall classes and architecture are quite similar to UML design for M1, with the change that the ResourceManager has been absorbed into each class using simpy.
 
+IMPORTANT!!! Information about simulation runs.
+
+    {"run_id": 1, "arrival_rate": 0.0833, "gates": 4, "crew": 2, "vehicles": 2},    base state, 4 gates, 2 crew, 2 vehicles
+    {"run_id": 2, "arrival_rate": 0.0833, "gates": 4, "crew": 3, "vehicles": 2},    3 crews
+    {"run_id": 3, "arrival_rate": 0.0833, "gates": 4, "crew": 2, "vehicles": 3},    3 vehicles
+    {"run_id": 4, "arrival_rate": 0.0833, "gates": 4, "crew": 4, "vehicles": 4},    4 crews, 4 vehicles
+    {"run_id": 5, "arrival_rate": 0.12,   "gates": 4, "crew": 2, "vehicles": 2},    0.12 arrival rate as opposed to original 0.08333 (more arrivals)
+    {"run_id": 6, "arrival_rate": 0.12,   "gates": 4, "crew": 4, "vehicles": 4},    0.12 arrival rate and 4 crews, 4 vehicles (more arrivals but more resources)
+    {"run_id": 7, "arrival_rate": 0.0833, "gates": 5, "crew": 2, "vehicles": 2},    5 gates
+    {"run_id": 8, "arrival_rate": 0.0833, "gates": 3, "crew": 2, "vehicles": 2},    3 gates
+    {"run_id": 9, "arrival_rate": 0.15,   "gates": 6, "crew": 4, "vehicles": 4},    0.15 arrival rate, 6 gates, 4 crews, 4 vehicles (more everything)
+    {"run_id": 10,"arrival_rate": 0.05,   "gates": 4, "crew": 1, "vehicles": 1}     0.05 arrival rate, 1 crew, 1 vehicle (less arrivals but less resources)

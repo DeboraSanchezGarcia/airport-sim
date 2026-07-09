@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import os
 import json
+import time
 
 # Passive Entities
 class Gate:
@@ -120,7 +121,6 @@ class AirportSimulation:
 
 # Execution
 if __name__ == "__main__":
-    # --- REQUIREMENT FULFILLED: Read from external configuration file ---
     try:
         with open('scenarios.json', 'r') as file:
             scenarios = json.load(file)
@@ -137,7 +137,6 @@ if __name__ == "__main__":
     print("Starting Simulation Suite...")
     
     for config in scenarios:
-        # --- REQUIREMENT FULFILLED: Parameter validation and error handling ---
         if config['gates'] <= 0 or config['crew'] <= 0 or config['vehicles'] <= 0:
             print(f"Error in Run {config['run_id']}: Resource amounts must be positive integers. Skipping...")
             continue
@@ -146,6 +145,9 @@ if __name__ == "__main__":
             continue
 
         print(f"Executing Run {config['run_id']}...")
+
+        start_time = time.time()
+
         env = simpy.Environment()
         
         # Initialize simulation with dynamic parameters
@@ -159,11 +161,14 @@ if __name__ == "__main__":
         )
         
         sim.run_simulation()
+
+        end_time = time.time() 
+        cpu_execution_time = round(end_time - start_time, 4)
+        print(f"Run {config['run_id']} completed in {cpu_execution_time} seconds.")
         
-        # Convert this run's metrics to a dataframe and append to master
         run_df = pd.DataFrame(sim.metrics)
-        # Use concat instead of append (append is deprecated in modern pandas)
         if not run_df.empty:
+            run_df['cpu_execution_time_sec'] = cpu_execution_time
             all_metrics = pd.concat([all_metrics, run_df], ignore_index=True)
 
     # Save the aggregated results
