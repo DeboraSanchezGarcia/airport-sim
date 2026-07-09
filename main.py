@@ -28,6 +28,15 @@ class Aircraft:
 
         # Calculate shortest time to implement SJF priority
         service_time = np.random.triangular(10, 20, 40)
+
+        # Weibull Distribution for weather delays
+        weather_delay = 0.0
+        # Assume a 15% chance a flight experiences a weather delay
+        if np.random.rand() < 0.15: 
+            weather_delay = np.random.weibull(1.5) * 15
+
+        # service time including optional weather delays
+        total_service_time = service_time + weather_delay
         
         # Requesting resources, gates are FIFO, crew and vehicles SJF
 
@@ -35,16 +44,16 @@ class Aircraft:
         with self.simulation.gates.request() as gate_req:
             yield gate_req
 
-        with self.simulation.ground_crew.request(priority=service_time) as crew_req, \
-             self.simulation.service_vehicles.request(priority=service_time) as veh_req:
+        with self.simulation.ground_crew.request(priority=total_service_time) as crew_req, \
+             self.simulation.service_vehicles.request(priority=total_service_time) as veh_req:
             
             yield crew_req & veh_req
             
             # Servicing (Triangular Distribution)
-            yield self.env.timeout(service_time)
+            yield self.env.timeout(total_service_time)
             
             # Collect metrics
-            self.simulation.record_metrics(self.name, arrival_time, service_time)
+            self.simulation.record_metrics(self.name, arrival_time, service_time, weather_delay)
 
 # Airport Simulation
 class AirportSimulation:
@@ -74,20 +83,28 @@ class AirportSimulation:
         self.env.process(self.arrival_generator())
         self.env.run(until=duration)
 
-    def record_metrics(self, name, arrival_time, service_time):
-        wait_time = self.env.now - arrival_time - service_time
-        completion_time_minutes = self.env.now
+    def record_metrics(self, name, arrival_time, base_service_time, weather_delay):
+        # total time spent at gate
+        total_service_time = base_service_time + weather_delay
 
+        wait_time = self.env.now - arrival_time - total_service_time
+        total_turnaround_time = wait_time + total_service_time
+
+        # Show departure time in 12 hour format
+        departure_minute = self.env.now
         shift_start = pd.to_datetime('08:00:00')
-        actual_time = shift_start + pd.to_timedelta(completion_time_minutes, unit='m')
+        actual_time = shift_start + pd.to_timedelta(departure_minute, unit='m')
         clock_time_str = actual_time.strftime('%I:%M %p')
 
 
         self.metrics.append({
             'aircraft': name,
             'wait_time': round(wait_time, 2),          # Rounded for cleaner CSV
-            'service_time': round(service_time, 2),    # Rounded for cleaner CSV
+            'base_service_time': round(base_service_time, 2),    # Rounded for cleaner CSV
+            'weather_delay_mins': round(weather_delay, 2),
+            'total_turnaround_time': round(total_turnaround_time, 2),
             'departure_clock_time': clock_time_str
+            
         })
 
     def save_to_csv(self, filename):
