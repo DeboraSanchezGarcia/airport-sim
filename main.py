@@ -2,6 +2,7 @@ import simpy
 import numpy as np
 import pandas as pd
 import os
+import json
 
 # Passive Entities
 class Gate:
@@ -119,26 +120,31 @@ class AirportSimulation:
 
 # Execution
 if __name__ == "__main__":
-    # 10 required parameter variations
-    scenarios = [
-        {'run_id': 1, 'arrival_rate': 0.0833, 'gates': 4, 'crew': 2, 'vehicles': 2}, # 1. Baseline
-        {'run_id': 2, 'arrival_rate': 0.0833, 'gates': 4, 'crew': 3, 'vehicles': 2}, # 2. Extra Crew
-        {'run_id': 3, 'arrival_rate': 0.0833, 'gates': 4, 'crew': 2, 'vehicles': 3}, # 3. Extra Vehicles
-        {'run_id': 4, 'arrival_rate': 0.0833, 'gates': 4, 'crew': 4, 'vehicles': 4}, # 4. High Resources
-        {'run_id': 5, 'arrival_rate': 0.12,   'gates': 4, 'crew': 2, 'vehicles': 2}, # 5. High Traffic (Stress Test)
-        {'run_id': 6, 'arrival_rate': 0.12,   'gates': 4, 'crew': 4, 'vehicles': 4}, # 6. High Traffic + High Resources
-        {'run_id': 7, 'arrival_rate': 0.0833, 'gates': 5, 'crew': 2, 'vehicles': 2}, # 7. Extra Gate, Base Resources
-        {'run_id': 8, 'arrival_rate': 0.0833, 'gates': 3, 'crew': 2, 'vehicles': 2}, # 8. Reduced Gates (Bottleneck)
-        {'run_id': 9, 'arrival_rate': 0.15,   'gates': 6, 'crew': 4, 'vehicles': 4}, # 9. Mega Airport Expansion
-        {'run_id': 10,'arrival_rate': 0.05,   'gates': 4, 'crew': 1, 'vehicles': 1}, # 10. Low Traffic, Low Resources
-    ]
+    # --- REQUIREMENT FULFILLED: Read from external configuration file ---
+    try:
+        with open('scenarios.json', 'r') as file:
+            scenarios = json.load(file)
+    except FileNotFoundError:
+        print("Error: Configuration file 'scenarios.json' not found.")
+        exit(1)
+    except json.JSONDecodeError:
+        print("Error: 'scenarios.json' contains invalid JSON format.")
+        exit(1)
 
     # Master dataframe to hold all results
     all_metrics = pd.DataFrame()
 
-    print("Starting 10-Run Simulation Suite...")
+    print("Starting Simulation Suite...")
     
     for config in scenarios:
+        # --- REQUIREMENT FULFILLED: Parameter validation and error handling ---
+        if config['gates'] <= 0 or config['crew'] <= 0 or config['vehicles'] <= 0:
+            print(f"Error in Run {config['run_id']}: Resource amounts must be positive integers. Skipping...")
+            continue
+        if config['arrival_rate'] <= 0:
+            print(f"Error in Run {config['run_id']}: Arrival rate must be greater than 0. Skipping...")
+            continue
+
         print(f"Executing Run {config['run_id']}...")
         env = simpy.Environment()
         
@@ -156,8 +162,13 @@ if __name__ == "__main__":
         
         # Convert this run's metrics to a dataframe and append to master
         run_df = pd.DataFrame(sim.metrics)
-        all_metrics = pd.concat([all_metrics, run_df], ignore_index=True)
+        # Use concat instead of append (append is deprecated in modern pandas)
+        if not run_df.empty:
+            all_metrics = pd.concat([all_metrics, run_df], ignore_index=True)
 
     # Save the aggregated results
-    all_metrics.to_csv("simulation_metrics.csv", index=False)
-    print("\nSuccess! All 10 runs complete. Data saved to simulation_metrics.csv.")
+    if not all_metrics.empty:
+        all_metrics.to_csv("simulation_metrics.csv", index=False)
+        print("\nSuccess! All runs complete. Data saved to simulation_metrics.csv.")
+    else:
+        print("\nSimulation completed, but no metrics were collected (check your parameters).")
