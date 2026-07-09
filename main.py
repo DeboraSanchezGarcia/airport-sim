@@ -57,22 +57,25 @@ class Aircraft:
 
 # Airport Simulation
 class AirportSimulation:
-    ARRIVAL_RATE = 0.08333 # estimating 40 planes in an 8 hour day (480 minutes)
     SIMULATION_DURATION = 480 # 8 hours in minutes
 
-    def __init__(self, env, arrival_rate=ARRIVAL_RATE): 
+    def __init__(self, env, run_id, arrival_rate, num_gates, num_crew, num_vehicles): 
         self.env = env
+        self.run_id = run_id
         self.arrival_rate = arrival_rate
+
+        # Dynamic capacities based on parameters
         self.gates = simpy.Resource(env, capacity=4) 
         self.ground_crew = simpy.PriorityResource(env, capacity=2)
         self.service_vehicles = simpy.PriorityResource(env, capacity=2)
+
         self.metrics = []
 
     def arrival_generator(self):
         count = 1
         while True:
             # Exponential Distribution 
-            yield self.env.timeout(np.random.exponential(1.0 / self.ARRIVAL_RATE))
+            yield self.env.timeout(np.random.exponential(1.0 / self.arrival_rate))
             
             # New Aircraft
             plane = Aircraft(f"Plane {count}", self.env, self)
@@ -98,6 +101,7 @@ class AirportSimulation:
 
 
         self.metrics.append({
+            'run_id': self.run_id,
             'aircraft': name,
             'wait_time': round(wait_time, 2),          # Rounded for cleaner CSV
             'base_service_time': round(base_service_time, 2),    # Rounded for cleaner CSV
@@ -114,9 +118,46 @@ class AirportSimulation:
         print(f"Metrics saved to {filename}")
 
 # Execution
-env = simpy.Environment()
-sim = AirportSimulation(env,)
-sim.run_simulation()
-sim.save_to_csv("simulation_metrics.csv")
-data = pd.read_csv("simulation_metrics.csv")
-print(data)
+if __name__ == "__main__":
+    # 10 required parameter variations
+    scenarios = [
+        {'run_id': 1, 'arrival_rate': 0.0833, 'gates': 4, 'crew': 2, 'vehicles': 2}, # 1. Baseline
+        {'run_id': 2, 'arrival_rate': 0.0833, 'gates': 4, 'crew': 3, 'vehicles': 2}, # 2. Extra Crew
+        {'run_id': 3, 'arrival_rate': 0.0833, 'gates': 4, 'crew': 2, 'vehicles': 3}, # 3. Extra Vehicles
+        {'run_id': 4, 'arrival_rate': 0.0833, 'gates': 4, 'crew': 4, 'vehicles': 4}, # 4. High Resources
+        {'run_id': 5, 'arrival_rate': 0.12,   'gates': 4, 'crew': 2, 'vehicles': 2}, # 5. High Traffic (Stress Test)
+        {'run_id': 6, 'arrival_rate': 0.12,   'gates': 4, 'crew': 4, 'vehicles': 4}, # 6. High Traffic + High Resources
+        {'run_id': 7, 'arrival_rate': 0.0833, 'gates': 5, 'crew': 2, 'vehicles': 2}, # 7. Extra Gate, Base Resources
+        {'run_id': 8, 'arrival_rate': 0.0833, 'gates': 3, 'crew': 2, 'vehicles': 2}, # 8. Reduced Gates (Bottleneck)
+        {'run_id': 9, 'arrival_rate': 0.15,   'gates': 6, 'crew': 4, 'vehicles': 4}, # 9. Mega Airport Expansion
+        {'run_id': 10,'arrival_rate': 0.05,   'gates': 4, 'crew': 1, 'vehicles': 1}, # 10. Low Traffic, Low Resources
+    ]
+
+    # Master dataframe to hold all results
+    all_metrics = pd.DataFrame()
+
+    print("Starting 10-Run Simulation Suite...")
+    
+    for config in scenarios:
+        print(f"Executing Run {config['run_id']}...")
+        env = simpy.Environment()
+        
+        # Initialize simulation with dynamic parameters
+        sim = AirportSimulation(
+            env=env,
+            run_id=config['run_id'],
+            arrival_rate=config['arrival_rate'],
+            num_gates=config['gates'],
+            num_crew=config['crew'],
+            num_vehicles=config['vehicles']
+        )
+        
+        sim.run_simulation()
+        
+        # Convert this run's metrics to a dataframe and append to master
+        run_df = pd.DataFrame(sim.metrics)
+        all_metrics = pd.concat([all_metrics, run_df], ignore_index=True)
+
+    # Save the aggregated results
+    all_metrics.to_csv("simulation_metrics.csv", index=False)
+    print("\nSuccess! All 10 runs complete. Data saved to simulation_metrics.csv.")
