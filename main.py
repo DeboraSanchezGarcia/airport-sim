@@ -72,6 +72,23 @@ class AirportSimulation:
         self.service_vehicles = simpy.PriorityResource(env, capacity=2)
 
         self.metrics = []
+        self.state_metrics = [] # state metrics in response to M3 review
+
+    # Response to M3 review for state metrics 
+    def state_monitor(self):
+        # Records the state of the airport resources every 1 minute (tick).
+        while True:
+            self.state_metrics.append({
+                'run_id': self.run_id,
+                'time_tick': self.env.now,
+                'gates_in_use': self.gates.count,
+                'gates_queue': len(self.gates.queue),
+                'crew_in_use': self.ground_crew.count,
+                'crew_queue': len(self.ground_crew.queue),
+                'vehicles_in_use': self.service_vehicles.count,
+                'vehicles_queue': len(self.service_vehicles.queue)
+            })
+            yield self.env.timeout(1) # Wait 1 minute before recording again
 
     def arrival_generator(self):
         count = 1
@@ -86,6 +103,7 @@ class AirportSimulation:
 
     def run_simulation(self, duration=SIMULATION_DURATION):
         self.env.process(self.arrival_generator())
+        self.env.process(self.state_monitor()) # start monitor process for state metrics
         self.env.run(until=duration)
 
     def record_metrics(self, name, arrival_time, base_service_time, weather_delay):
@@ -131,8 +149,13 @@ if __name__ == "__main__":
         print("Error: 'scenarios.json' contains invalid JSON format.")
         exit(1)
 
+    # Define the number of independent replications (response to M3 review)
+    NUM_REPLICATIONS = 10
+
     # Master dataframe to hold all results
     all_metrics = pd.DataFrame()
+    # Dataframe for state data
+    all_state_metrics = pd.DataFrame()
 
     print("Starting Simulation Suite...")
     
@@ -166,14 +189,21 @@ if __name__ == "__main__":
         cpu_execution_time = round(end_time - start_time, 4)
         print(f"Run {config['run_id']} completed in {cpu_execution_time} seconds.")
         
+        # Append aircraft metrics
         run_df = pd.DataFrame(sim.metrics)
         if not run_df.empty:
             run_df['cpu_execution_time_sec'] = cpu_execution_time
             all_metrics = pd.concat([all_metrics, run_df], ignore_index=True)
 
+        # Append state metrics
+        state_df = pd.DataFrame(sim.state_metrics)
+        if not state_df.empty:
+            all_state_metrics = pd.concat([all_state_metrics, state_df], ignore_index=True)
+
     # Save the aggregated results
     if not all_metrics.empty:
         all_metrics.to_csv("simulation_metrics.csv", index=False)
-        print("\nSuccess! All runs complete. Data saved to simulation_metrics.csv.")
+        all_state_metrics.to_csv("system_state_metrics.csv", index=False)
+        print("\nSuccess! All runs complete. Data saved to simulation_metrics.csv and and system_state_metrics.csv.")
     else:
         print("\nSimulation completed, but no metrics were collected (check your parameters).")

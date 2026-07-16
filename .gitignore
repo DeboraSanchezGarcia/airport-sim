@@ -15,3 +15,4 @@ data/
 .env               
 
 .simulation_metrics.csv
+.system_state_metrics.csv
