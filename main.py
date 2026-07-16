@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import json
 import time
+import random
 
 # Passive Entities
 class Gate:
@@ -157,8 +158,8 @@ if __name__ == "__main__":
     # Dataframe for state data
     all_state_metrics = pd.DataFrame()
 
-    print("Starting Simulation Suite...")
-    
+    print(f"Starting Simulation Suite ({NUM_REPLICATIONS} replications per scenario)...")
+
     for config in scenarios:
         if config['gates'] <= 0 or config['crew'] <= 0 or config['vehicles'] <= 0:
             print(f"Error in Run {config['run_id']}: Resource amounts must be positive integers. Skipping...")
@@ -167,39 +168,51 @@ if __name__ == "__main__":
             print(f"Error in Run {config['run_id']}: Arrival rate must be greater than 0. Skipping...")
             continue
 
-        print(f"Executing Run {config['run_id']}...")
+        print(f"Executing Scenario {config['run_id']}...")  
 
-        start_time = time.time()
+        for rep in range(1, NUM_REPLICATIONS + 1):
+            
+            # Multiply run_id by 100 and add the rep number so Scenario 1 Rep 1 is seed 101, Scenario 2 Rep 1 is 201, etc.
+            seed_value = int(config['run_id']) * 100 + rep
+            np.random.seed(seed_value)
+            random.seed(seed_value)
 
-        env = simpy.Environment()
-        
-        # Initialize simulation with dynamic parameters
-        sim = AirportSimulation(
-            env=env,
-            run_id=config['run_id'],
-            arrival_rate=config['arrival_rate'],
-            num_gates=config['gates'],
-            num_crew=config['crew'],
-            num_vehicles=config['vehicles']
-        )
-        
-        sim.run_simulation()
+            start_time = time.time()
+            env = simpy.Environment()
+            
+            # Initialize simulation with dynamic parameters
+            sim = AirportSimulation(
+                env=env,
+                run_id=config['run_id'],
+                arrival_rate=config['arrival_rate'],
+                num_gates=config['gates'],
+                num_crew=config['crew'],
+                num_vehicles=config['vehicles']
+            )
+            
+            sim.run_simulation()
 
-        end_time = time.time() 
-        cpu_execution_time = round(end_time - start_time, 4)
-        print(f"Run {config['run_id']} completed in {cpu_execution_time} seconds.")
-        
-        # Append aircraft metrics
-        run_df = pd.DataFrame(sim.metrics)
-        if not run_df.empty:
-            run_df['cpu_execution_time_sec'] = cpu_execution_time
-            all_metrics = pd.concat([all_metrics, run_df], ignore_index=True)
+            end_time = time.time() 
+            cpu_execution_time = round(end_time - start_time, 4)
+            
+            # Append aircraft metrics
+            run_df = pd.DataFrame(sim.metrics)
+            if not run_df.empty:
+                run_df['cpu_execution_time_sec'] = cpu_execution_time
+                # Track which replication this came from
+                run_df['replication_id'] = rep
+                all_metrics = pd.concat([all_metrics, run_df], ignore_index=True)
+                
+            # Append state metrics
+            state_df = pd.DataFrame(sim.state_metrics)
+            if not state_df.empty:
+                # Track which replication this came from
+                state_df['replication_id'] = rep 
+                all_state_metrics = pd.concat([all_state_metrics, state_df], ignore_index=True)
 
-        # Append state metrics
-        state_df = pd.DataFrame(sim.state_metrics)
-        if not state_df.empty:
-            all_state_metrics = pd.concat([all_state_metrics, state_df], ignore_index=True)
+        print(f"  -> Finished {NUM_REPLICATIONS} replications for Scenario {config['run_id']}.")
 
+    
     # Save the aggregated results
     if not all_metrics.empty:
         all_metrics.to_csv("simulation_metrics.csv", index=False)
