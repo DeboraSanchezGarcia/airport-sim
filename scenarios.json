@@ -8,5 +8,7 @@
     {"run_id": 7, "arrival_rate": 0.0833, "gates": 5, "crew": 2, "vehicles": 2},
     {"run_id": 8, "arrival_rate": 0.0833, "gates": 3, "crew": 2, "vehicles": 2},
     {"run_id": 9, "arrival_rate": 0.15,   "gates": 6, "crew": 4, "vehicles": 4},
-    {"run_id": 10,"arrival_rate": 0.05,   "gates": 4, "crew": 1, "vehicles": 1}
+    {"run_id": 10,"arrival_rate": 0.05,   "gates": 4, "crew": 1, "vehicles": 1},
+    {"run_id": 11, "arrival_rate": 0.15, "gates": 6, "crew": 3, "vehicles": 3},
+    {"run_id": 12, "arrival_rate": 0.05, "gates": 3, "crew": 1, "vehicles": 1}
 ]
