@@ -68,9 +68,9 @@ class AirportSimulation:
         self.arrival_rate = arrival_rate
 
         # Dynamic capacities based on parameters
-        self.gates = simpy.Resource(env, capacity=4) 
-        self.ground_crew = simpy.PriorityResource(env, capacity=2)
-        self.service_vehicles = simpy.PriorityResource(env, capacity=2)
+        self.gates = simpy.Resource(env, capacity=num_gates) 
+        self.ground_crew = simpy.PriorityResource(env, capacity=num_crew)
+        self.service_vehicles = simpy.PriorityResource(env, capacity=num_vehicles)
 
         self.metrics = []
         self.state_metrics = [] # state metrics in response to M3 review

@@ -70,7 +70,13 @@ if __name__ == "__main__":
 
     # Calculate Sensitivity for Gates (Run 1 vs Run 8: Gates go from 4 to 3)
     calculate_sensitivity(df, base_run=1, test_run=8, input_name="Gates", base_input_val=4, test_input_val=3)
+    # Calculate Sensitivity for Gates (Run 1 vs Run 7: Gates go from 4 to 5)
+    calculate_sensitivity(df, base_run=1, test_run=7, input_name="Gates +1", base_input_val=4, test_input_val=5)
+
     
-    # Calculate Sensitivity for Crew (Run 1 vs Run 2: Crew goes from 2 to 3)
-    calculate_sensitivity(df, base_run=1, test_run=2, input_name="Ground Crew", base_input_val=2, test_input_val=3)
+    # Calculate Sensitivity for Crew and Vehicles(Run 1 vs Run 10: Crew and Vehicles go from 2 each to 1 each)
+    calculate_sensitivity(df, base_run=1, test_run=10, input_name="Ground Crew and Service Vehicles", base_input_val=2, test_input_val=1)
+
+    calculate_sensitivity(df, base_run=1, test_run=4, input_name="4 Ground Crew and 4 Service Vehicles", base_input_val=2, test_input_val=4)
+
 
